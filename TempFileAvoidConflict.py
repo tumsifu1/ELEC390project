@@ -35,7 +35,7 @@ axs.plot_surface(X, Y, Z, cmap='viridis')
 axs.set_xlabel('X')
 axs.set_ylabel('Y')
 axs.set_zlabel('Z')
-axs.set_title('XZ Jumping Data (3D Heatmap)')
+axs.set_title('AM Jumping Data (3D Heatmap)')
 
 # Set the initial viewpoint
 axs.view_init(elev=30, azim=120)
