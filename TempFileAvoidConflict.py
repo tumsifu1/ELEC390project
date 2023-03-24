@@ -11,24 +11,34 @@ with h5py.File('./accelerometer_data.h5', 'r') as hdf:
 
 # Plot acceleration vs. time for walking and jumping data
 fig = plt.figure(figsize=(10, 10))
-axs = fig.add_subplot(111, project = '3d')
+axs = fig.add_subplot(111, projection='3d')
 
-# Walking data
+# Jumping data
 x = member_jumping_data[:, 1]
 y = member_jumping_data[:, 2]
 z = member_jumping_data[:, 3]
 
-heatmap, xedges, yedges = np.histogram2d(x, y, bins=20)
-extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-    
+# Create a grid of coordinates
+X, Y = np.meshgrid(np.arange(x.min(), x.max(), 0.1), np.arange(y.min(), y.max(), 0.1))
+Z = np.zeros_like(X)
+
+# Fill in the grid with the corresponding values of z
+for i in range(X.shape[0]):
+    for j in range(X.shape[1]):
+        idx = np.argmin((x - X[i,j])**2 + (y - Y[i,j])**2)
+        Z[i,j] = z[idx]
+
+# Create the surface plot
+axs.plot_surface(X, Y, Z, cmap='viridis')
+
+# Set the axis labels and title
 axs.set_xlabel('X')
 axs.set_ylabel('Y')
 axs.set_zlabel('Z')
-
 axs.set_title('XZ Jumping Data (3D Heatmap)')
 
+# Set the initial viewpoint
 axs.view_init(elev=30, azim=120)
 
-axs.plot_surface(x, y, z, cmap='viridis')
-
+# Show the plot
 plt.show()
