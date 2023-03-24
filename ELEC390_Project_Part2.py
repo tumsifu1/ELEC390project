@@ -8,27 +8,25 @@ import pandas as pd
 # Load accelerometer data for each member from CSV files
 # Each member has walking and jumping data, with four different types of collection
 # The desired sampling rate is 100 Hz, and each type of collection is limited to 115 seconds
-# Ignore index command is used to avoid data overlapping issues with csv files
-
 # 115 seconds for each collection with 100 samples per second
 dataRange = 11500
 
 # Member 1: MP
 
 # Adjust Data to 100 Hz with a factor
-M1DataCheck = pd.read_csv('MPWalkingBackPocket.csv')
+M1DataCheck = pd.read_csv('UserData/MPWalkingBackPocket.csv')
 M1SamplingFactor = round(len(M1DataCheck)/(100*M1DataCheck.iloc[-1, 0]))
 
 # Walking Data
 member1_walking_data = pd.concat([
-    pd.read_csv('MPWalkingBackPocket.csv', nrows=M1SamplingFactor*dataRange), pd.read_csv('MPWalkingFrontPocket.csv', nrows=M1SamplingFactor*dataRange),
-    pd.read_csv('MPWalkingJacketPocket.csv', nrows=dataRange), pd.read_csv('MPWalkingHand.csv', nrows=dataRange)
+    pd.read_csv('UserData/MPWalkingBackPocket.csv', nrows=M1SamplingFactor*dataRange), pd.read_csv('UserData/MPWalkingFrontPocket.csv', nrows=M1SamplingFactor*dataRange),
+    pd.read_csv('UserData/MPWalkingJacketPocket.csv', nrows=dataRange), pd.read_csv('UserData/MPWalkingHand.csv', nrows=dataRange)
 ], ignore_index=True)
 
 # Jumping Data
 member1_jumping_data = pd.concat([
-    pd.read_csv('MPJumpingBackPocket.csv', nrows=M1SamplingFactor*dataRange), pd.read_csv('MPJumpingFrontPocket.csv', nrows=M1SamplingFactor*dataRange),
-    pd.read_csv('MPJumpingJacketPocket.csv', nrows=M1SamplingFactor*dataRange), pd.read_csv('MPJumpingHand.csv', nrows=M1SamplingFactor*dataRange)
+    pd.read_csv('UserData/MPJumpingBackPocket.csv', nrows=M1SamplingFactor*dataRange), pd.read_csv('UserData/MPJumpingFrontPocket.csv', nrows=M1SamplingFactor*dataRange),
+    pd.read_csv('UserData/MPJumpingJacketPocket.csv', nrows=M1SamplingFactor*dataRange), pd.read_csv('UserData/MPJumpingHand.csv', nrows=M1SamplingFactor*dataRange)
 ], ignore_index=True)
 
 if M1SamplingFactor > 1:
@@ -36,17 +34,17 @@ if M1SamplingFactor > 1:
     member1_walking_data = member1_walking_data.drop(member1_walking_data.index[1::M1SamplingFactor])
 
 # Member 2: AM
-M2DataCheck = pd.read_csv('AMWalkingBackPocket.csv')
+M2DataCheck = pd.read_csv('UserData/AMWalkingBackPocket.csv')
 M2SamplingFactor = round(len(M2DataCheck)/(100*M2DataCheck.iloc[-1, 0]))
 
 member2_walking_data = pd.concat([
-    pd.read_csv('AMWalkingBackPocket.csv', nrows=M2SamplingFactor*dataRange), pd.read_csv('AMWalkingFrontPocket.csv', nrows=M2SamplingFactor*dataRange),
-    pd.read_csv('AMWalkingJacketPocket.csv', nrows=M2SamplingFactor*dataRange), pd.read_csv('AMWalkingHand.csv', nrows=M2SamplingFactor*dataRange)
+    pd.read_csv('UserData/AMWalkingBackPocket.csv', nrows=M2SamplingFactor*dataRange), pd.read_csv('UserData/AMWalkingFrontPocket.csv', nrows=M2SamplingFactor*dataRange),
+    pd.read_csv('UserData/AMWalkingJacketPocket.csv', nrows=M2SamplingFactor*dataRange), pd.read_csv('UserData/AMWalkingHand.csv', nrows=M2SamplingFactor*dataRange)
 ], ignore_index=True)
 
 member2_jumping_data = pd.concat([
-    pd.read_csv('AMJumpingBackPocket.csv', nrows=M2SamplingFactor*dataRange), pd.read_csv('AMJumpingFrontPocket.csv', nrows=M2SamplingFactor*dataRange),
-    pd.read_csv('AMJumpingJacketPocket.csv', nrows=M2SamplingFactor*dataRange), pd.read_csv('AMJumpingHand.csv', nrows=M2SamplingFactor*dataRange)
+    pd.read_csv('UserData/AMJumpingBackPocket.csv', nrows=M2SamplingFactor*dataRange), pd.read_csv('UserData/AMJumpingFrontPocket.csv', nrows=M2SamplingFactor*dataRange),
+    pd.read_csv('UserData/AMJumpingJacketPocket.csv', nrows=M2SamplingFactor*dataRange), pd.read_csv('UserData/AMJumpingHand.csv', nrows=M2SamplingFactor*dataRange)
 ], ignore_index=True)
 
 if M2SamplingFactor > 1:
@@ -54,18 +52,18 @@ if M2SamplingFactor > 1:
     member2_walking_data = member2_walking_data.drop(member2_walking_data.index[1::M2SamplingFactor])
 
 # Member 3: XZ
-M3DataCheck = pd.read_csv('XZWalkingBackPocket.csv')
+M3DataCheck = pd.read_csv('UserData/XZWalkingBackPocket.csv')
 M3SamplingFactor = round(len(M3DataCheck)/(100*M3DataCheck.iloc[-1, 0]))
 
 member3_walking_data = pd.concat([
-    pd.read_csv('XZWalkingBackPocket.csv', nrows=M3SamplingFactor*dataRange), pd.read_csv('XZWalkingFrontPocket.csv', nrows=M3SamplingFactor*dataRange),
-    pd.read_csv('XZWalkingJacketPocket.csv', nrows=M3SamplingFactor*dataRange), pd.read_csv('XZWalkingHand.csv', nrows=M3SamplingFactor*dataRange)
+    pd.read_csv('UserData/XZWalkingBackPocket.csv', nrows=M3SamplingFactor*dataRange), pd.read_csv('UserData/XZWalkingFrontPocket.csv', nrows=M3SamplingFactor*dataRange),
+    pd.read_csv('UserData/XZWalkingJacketPocket.csv', nrows=M3SamplingFactor*dataRange), pd.read_csv('UserData/XZWalkingHand.csv', nrows=M3SamplingFactor*dataRange)
 ], ignore_index=True)
 
 
 member3_jumping_data = pd.concat([
-    pd.read_csv('XZJumpingBackPocket.csv', nrows=2*dataRange), pd.read_csv('XZJumpingFrontPocket.csv', nrows=2*dataRange),
-    pd.read_csv('XZJumpingJacketPocket.csv', nrows=2*dataRange), pd.read_csv('XZJumpingHand.csv', nrows=2*dataRange)
+    pd.read_csv('UserData/XZJumpingBackPocket.csv', nrows=2*dataRange), pd.read_csv('UserData/XZJumpingFrontPocket.csv', nrows=2*dataRange),
+    pd.read_csv('UserData/XZJumpingJacketPocket.csv', nrows=2*dataRange), pd.read_csv('UserData/XZJumpingHand.csv', nrows=2*dataRange)
 ], ignore_index=True)
 
 if M3SamplingFactor > 1:
