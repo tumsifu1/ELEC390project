@@ -77,6 +77,32 @@ all_data = {
     'XZ': {'walking': member3_walking_data, 'jumping': member3_jumping_data}
 }
 
+# Combining data
+walking_combined_data = pd.concat([
+    member1_walking_data, member2_walking_data, member3_walking_data
+], ignore_index=True)
+jumping_combined_data = pd.concat([
+    member1_jumping_data, member2_jumping_data, member3_jumping_data
+], ignore_index=True)
+combined_data = pd.concat([walking_combined_data, jumping_combined_data], ignore_index=True)
+
+walking_combined_data = walking_combined_data.to_numpy()
+np.random.shuffle(walking_combined_data)
+walking_combined_df = pd.DataFrame(walking_combined_data)
+walking_combined_df.to_csv('walking_combined_data.csv', index=False)
+
+jumping_combined_data = jumping_combined_data.to_numpy()
+np.random.shuffle(jumping_combined_data)
+jumping_combined_df = pd.DataFrame(jumping_combined_data)
+jumping_combined_df.to_csv('jumping_combined_data.csv', index=False)
+
+combined_data = combined_data.to_numpy()
+np.random.shuffle(combined_data)
+num_test = int(0.1 * len(combined_data))
+test_combined_data = combined_data[:num_test]
+test_combined_df = pd.DataFrame(test_combined_data)
+test_combined_df.to_csv('test_combined_data.csv', index=False)
+
 # Create an HDF5 file with structure:
 # Top Level; Dataset[Train(Walk, Jump), Test(Walk, Jump)], MP(Walk, Jump), AM(Walk, Jump), XZ(Walk, Jump)
 with h5py.File('./accelerometer_data.h5', 'w') as hdf:
@@ -95,14 +121,15 @@ with h5py.File('./accelerometer_data.h5', 'w') as hdf:
         for activity in ['walking', 'jumping']:
             data = member_data[activity]
 
-            # Segment the data into 5-second windows']:
-            windows = [data[(i * 100):(i * 100 + 500)] for i in range(len(data) // 100 - 4)]
+            # Segment the data into 5-second windows
+            num_segments = (len(data) - 500) // 100 + 1
+            segments = [data[(i * 100):(i * 100 + 500)] for i in range(num_segments)]
 
             # Label the segments with the member name and activity
-            labels = [f'{member_name}_{activity}' for _ in range(len(windows))]
+            labels = [f'{member_name}_{activity}' for _ in range(num_segments)]
 
             # Combine the segments and labels for this position/activity combination
-            all_segments.extend(list(zip(windows, labels)))
+            all_segments.extend(list(zip(segments, labels)))
 
     # Shuffle the segmented data
     np.random.shuffle(all_segments)
