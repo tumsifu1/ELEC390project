@@ -1,3 +1,5 @@
+
+#ELEC 390 Part 3 - Data visulation 
 import h5py
 import numpy as np
 import pandas as pd
@@ -88,3 +90,23 @@ ax.set_zlabel('Acceleration Z')
 ax.legend()
 
 plt.show()
+
+#plotting windows
+def plot_window(walking_data, jumping_data, window_start, window_size):
+    fig, ax = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+
+    # Plot walking data window
+    walking_window = walking_data[window_start:window_start + window_size, :]
+    plot_data(ax[0], walking_window, 'Walking: Acceleration Magnitude vs Time', 'blue', 'Walking')
+
+    # Plot jumping data window
+    jumping_window = jumping_data[window_start:window_start + window_size, :]
+    plot_data(ax[1], jumping_window, 'Jumping: Acceleration Magnitude vs Time', 'red', 'Jumping')
+
+    fig.tight_layout()
+    plt.show()
+
+window_start = 1000
+window_size = 500
+plot_window(walking_data, jumping_data, window_start, window_size)
+
