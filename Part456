@@ -13,6 +13,7 @@ from sklearn.metrics import ConfusionMatrixDisplay
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import recall_score
 from scipy.stats import skew
+import joblib
 
 
 # Part 4 - Preprocessing
@@ -165,15 +166,15 @@ jumping_filtered = data_processing(train_jumping_windows, window_size)
 
 # Combine walking and jumping data into one dataset
 training_features = np.concatenate((walking_filtered, jumping_filtered), axis=0)
-training_labels = np.concatenate((np.ones((walking_filtered.shape[0], 1)),
-                                  2 * np.ones((jumping_filtered.shape[0], 1))), axis=0)
+training_labels = np.concatenate((np.zeros((walking_filtered.shape[0], 1)),
+                                  np.ones((jumping_filtered.shape[0], 1))), axis=0)
 
 # Extract features from test data and combine walking and jumping into dataset
 test_walking_features = test_feature_extraction(test_walking_windows)
 test_jumping_features = test_feature_extraction(test_jumping_windows)
 test_features = np.concatenate((test_walking_features, test_jumping_features), axis=0)
-test_labels = np.concatenate((np.ones((test_walking_features.shape[0], 1)),
-                              2 * np.ones((test_jumping_features.shape[0], 1))), axis=0)
+test_labels = np.concatenate((np.zeros((test_walking_features.shape[0], 1)),
+                              np.ones((test_jumping_features.shape[0], 1))), axis=0)
 
 # Add labels to the train and test feature arrays
 column_labels = np.array(
@@ -185,15 +186,16 @@ test_dataset = pd.DataFrame(np.hstack((test_features, test_labels)), columns=col
 # Part 6 - Classifier
 
 # Reading datasets and converting them into 4 separate dataframes
-xTrain = training_dataset[training_dataset.iloc[:, 10] == 1]
-yTrain = training_dataset[training_dataset.iloc[:, 10] == 2]
-zTrain = training_dataset[training_dataset.iloc[:, 10] == 3]
-allTrain = training_dataset[training_dataset.iloc[:, 10] == 4]
+featureNumber = 10
+xTrain = training_dataset[training_dataset.iloc[:, featureNumber] == 1]
+yTrain = training_dataset[training_dataset.iloc[:, featureNumber] == 2]
+zTrain = training_dataset[training_dataset.iloc[:, featureNumber] == 3]
+allTrain = training_dataset[training_dataset.iloc[:, featureNumber] == 4]
 
-xTest = test_dataset[test_dataset.iloc[:, 10] == 1]
-yTest = test_dataset[test_dataset.iloc[:, 10] == 2]
-zTest = test_dataset[test_dataset.iloc[:, 10] == 3]
-allTest = test_dataset[test_dataset.iloc[:, 10] == 4]
+xTest = test_dataset[test_dataset.iloc[:, featureNumber] == 1]
+yTest = test_dataset[test_dataset.iloc[:, featureNumber] == 2]
+zTest = test_dataset[test_dataset.iloc[:, featureNumber] == 3]
+allTest = test_dataset[test_dataset.iloc[:, featureNumber] == 4]
 
 # Separating dataframes into train and test
 X_xTrain = xTrain.iloc[:, 0:-2]  # Remove outer labels
@@ -213,7 +215,6 @@ Y_combinedTrain = allTrain.iloc[:, -1]
 Y_combinedTest = allTest.iloc[:, -1]
 
 # Creating a combined train and test set with all the features for the 4 measurements
-featureNumber = 10
 X_combinedTrain = np.zeros((X_xTrain.shape[0], 4*featureNumber))
 X_combinedTest = np.zeros((X_xTest.shape[0], 4*featureNumber))
 for k in range(featureNumber):
@@ -232,6 +233,8 @@ clfCombined = make_pipeline(StandardScaler(), l_reg)
 
 # Training the model
 clfCombined.fit(X_combinedTrain, Y_combinedTrain)
+
+joblib.dump(clfCombined, 'classifier.joblib')
 
 # Calculating the predictions and their probabilities
 Y_predicted_combined = clfCombined.predict(X_combinedTest)
