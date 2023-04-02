@@ -1,0 +1,265 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import h5py
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score
+from sklearn.pipeline import make_pipeline
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_curve
+from sklearn.metrics import RocCurveDisplay
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import recall_score
+from scipy.stats import skew
+
+
+# Part 4 - Preprocessing
+def data_processing(windows, w_size):
+    # Create array for filtered data
+    filtered_data = np.zeros((windows.shape[0], windows.shape[1]-w_size+1, windows.shape[2]))
+
+    # Loop through each window and apply a moving average filter to each acceleration
+    for i in range(windows.shape[0]):
+        # Creating dataframes
+        x_df = pd.DataFrame(windows[i, :, 0])
+        y_df = pd.DataFrame(windows[i, :, 1])
+        z_df = pd.DataFrame(windows[i, :, 2])
+        total = windows[i, :, 3]  # MA filter not used on total acceleration
+
+        # Apply MA filter
+        x_sma = x_df.rolling(w_size).mean().values.ravel()
+        y_sma = y_df.rolling(w_size).mean().values.ravel()
+        z_sma = z_df.rolling(w_size).mean().values.ravel()
+
+        # Discard the filtered NaN values
+        x_sma = x_sma[w_size - 1:]
+        y_sma = y_sma[w_size - 1:]
+        z_sma = z_sma[w_size - 1:]
+        total_sma = total[w_size - 1:]  # Keeping the same dimensions as other data
+
+        # Store filtered data in array
+        filtered_data[i, :, 0] = x_sma
+        filtered_data[i, :, 1] = y_sma
+        filtered_data[i, :, 2] = z_sma
+        filtered_data[i, :, 3] = total_sma
+
+    # Extract features
+    feature_data = train_feature_extraction(filtered_data)
+
+    # Create dataframes for further processing
+    x_df = pd.DataFrame(feature_data[:, :, 0])
+    y_df = pd.DataFrame(feature_data[:, :, 1])
+    z_df = pd.DataFrame(feature_data[:, :, 2])
+    total_df = pd.DataFrame(feature_data[:, :, 3])
+
+    # Using z score to remove outliers in each dataframe
+    for df in [x_df, y_df, z_df, total_df]:
+        for i in range(df.shape[1]):
+            column_data = df.iloc[:, i]
+            z_scores = (column_data - column_data.mean())/column_data.std()
+            column_data = column_data.mask(abs(z_scores) > 3, other=np.nan)  # Threshold at a z score of 3
+            df.iloc[:, i] = column_data.fillna(filtered_data.mean())  # Fill NaN values with mean
+
+    # Creating filtered feature array with labels for each measurement
+
+    filtered_feature_data = np.concatenate((x_df, y_df, z_df, total_df), axis=0)
+    labels = np.concatenate((np.ones((x_df.shape[0], 1)),
+                             2 * np.ones((y_df.shape[0], 1)),
+                             3 * np.ones((z_df.shape[0], 1)),
+                             4 * np.ones((total_df.shape[0], 1))), axis=0)
+    filtered_feature_data = np.hstack((filtered_feature_data, labels))
+
+    return filtered_feature_data
+
+
+# Part 5 - Feature extraction for training data
+def train_feature_extraction(windows):
+    # Create an empty array to hold the feature vectors
+    features = np.zeros((windows.shape[0], 10, 4))
+
+    # Iterate over each time window and extract the features
+    for i in range(windows.shape[2]):
+        for j in range(windows.shape[0]):
+            # Extract the data from the window
+            window_data = windows[j, :, i]
+
+            # Compute the features
+            max_val = np.max(window_data)
+            min_val = np.min(window_data)
+            range_val = max_val - min_val
+            mean_val = np.mean(window_data)
+            median_val = np.median(window_data)
+            var_val = np.var(window_data)
+            skew_val = skew(window_data)
+            rms_val = np.sqrt(np.mean(window_data ** 2))
+            kurt_val = np.mean((window_data - np.mean(window_data)) ** 4) / (np.var(window_data) ** 2)
+            std_val = np.std(window_data)
+
+            # Store the features in the features array
+            features[j, :, i] = (max_val, min_val, range_val, mean_val, median_val, var_val, skew_val,
+                                 rms_val, kurt_val, std_val)
+
+    return features
+
+
+# Part 5 - Feature extraction for test data
+def test_feature_extraction(windows):
+    # Create an empty array to hold the feature vectors
+    features = np.zeros((windows.shape[0], 10, 4))
+
+    # Iterate over each time window and extract the features
+    for i in range(windows.shape[2]):
+        for j in range(windows.shape[0]):
+            # Extract the data from the window
+            window_data = windows[j, :, i]
+
+            # Compute the features
+            max_val = np.max(window_data)
+            min_val = np.min(window_data)
+            range_val = max_val - min_val
+            mean_val = np.mean(window_data)
+            median_val = np.median(window_data)
+            var_val = np.var(window_data)
+            skew_val = skew(window_data)
+            rms_val = np.sqrt(np.mean(window_data ** 2))
+            kurt_val = np.mean((window_data - np.mean(window_data)) ** 4) / (np.var(window_data) ** 2)
+            std_val = np.std(window_data)
+
+            # Store the features in the features array
+            features[j, :, i] = (max_val, min_val, range_val, mean_val, median_val, var_val, skew_val, rms_val,
+                                 kurt_val, std_val)
+
+    x_feature = features[:, :, 0]
+    y_feature = features[:, :, 1]
+    z_feature = features[:, :, 2]
+    total_feature = features[:, :, 3]
+
+    # Concatenate the feature arrays
+    all_features = np.concatenate((x_feature, y_feature, z_feature, total_feature), axis=0)
+
+    # Create a column of labels
+    labels = np.concatenate((np.ones((x_feature.shape[0], 1)),
+                             2 * np.ones((y_feature.shape[0], 1)),
+                             3 * np.ones((z_feature.shape[0], 1)),
+                             4 * np.ones((total_feature.shape[0], 1))), axis=0)
+
+    # Add the labels column to the feature array
+    all_features = np.hstack((all_features, labels))
+
+    return all_features
+
+
+# Import the data from the HDF5 file
+with h5py.File('./accelerometer_data.h5', 'r') as hdf:
+    train_walking_windows = hdf['dataset/train/walking'][:, :, 1:]
+    train_jumping_windows = hdf['dataset/train/jumping'][:, :, 1:]
+    test_walking_windows = hdf['dataset/test/walking'][:, :, 1:]
+    test_jumping_windows = hdf['dataset/test/jumping'][:, :, 1:]
+
+# Process data with a specified window size for the MA filter
+window_size = 5
+walking_filtered = data_processing(train_walking_windows, window_size)
+jumping_filtered = data_processing(train_jumping_windows, window_size)
+
+# Combine walking and jumping data into one dataset
+training_features = np.concatenate((walking_filtered, jumping_filtered), axis=0)
+training_labels = np.concatenate((np.ones((walking_filtered.shape[0], 1)),
+                                  2 * np.ones((jumping_filtered.shape[0], 1))), axis=0)
+
+# Extract features from test data and combine walking and jumping into dataset
+test_walking_features = test_feature_extraction(test_walking_windows)
+test_jumping_features = test_feature_extraction(test_jumping_windows)
+test_features = np.concatenate((test_walking_features, test_jumping_features), axis=0)
+test_labels = np.concatenate((np.ones((test_walking_features.shape[0], 1)),
+                              2 * np.ones((test_jumping_features.shape[0], 1))), axis=0)
+
+# Add labels to the train and test feature arrays
+column_labels = np.array(
+        ['max_val', 'min_val', 'range_val', 'mean_val', 'median_val', 'var_val', 'skew_val', 'rms_val', 'kurt_val',
+         'std_val', 'measurement', 'activity'])
+training_dataset = pd.DataFrame(np.hstack((training_features, training_labels)), columns=column_labels)
+test_dataset = pd.DataFrame(np.hstack((test_features, test_labels)), columns=column_labels)
+
+# Part 6 - Classifier
+
+# Reading datasets and converting them into 4 separate dataframes
+xTrain = training_dataset[training_dataset.iloc[:, 10] == 1]
+yTrain = training_dataset[training_dataset.iloc[:, 10] == 2]
+zTrain = training_dataset[training_dataset.iloc[:, 10] == 3]
+allTrain = training_dataset[training_dataset.iloc[:, 10] == 4]
+
+xTest = test_dataset[test_dataset.iloc[:, 10] == 1]
+yTest = test_dataset[test_dataset.iloc[:, 10] == 2]
+zTest = test_dataset[test_dataset.iloc[:, 10] == 3]
+allTest = test_dataset[test_dataset.iloc[:, 10] == 4]
+
+# Separating dataframes into train and test
+X_xTrain = xTrain.iloc[:, 0:-2]  # Remove outer labels
+X_xTest = xTest.iloc[:, 0:-2]
+
+X_yTrain = yTrain.iloc[:, 0:-2]
+X_yTest = yTest.iloc[:, 0:-2]
+
+X_zTrain = zTrain.iloc[:, 0:-2]
+X_zTest = zTest.iloc[:, 0:-2]
+
+X_allTrain = allTrain.iloc[:, 0:-2]
+X_allTest = allTest.iloc[:, 0:-2]
+
+# Labels (same for all dataframes)
+Y_combinedTrain = allTrain.iloc[:, -1]
+Y_combinedTest = allTest.iloc[:, -1]
+
+# Creating a combined train and test set with all the features for the 4 measurements
+featureNumber = 10
+X_combinedTrain = np.zeros((X_xTrain.shape[0], 4*featureNumber))
+X_combinedTest = np.zeros((X_xTest.shape[0], 4*featureNumber))
+for k in range(featureNumber):
+    X_combinedTrain[:, k] = X_xTrain.iloc[:, k]
+    X_combinedTrain[:, k+featureNumber] = X_yTrain.iloc[:, k]
+    X_combinedTrain[:, k+(2*featureNumber)] = X_zTrain.iloc[:, k]
+    X_combinedTrain[:, k+(3*featureNumber)] = X_allTrain.iloc[:, k]
+    X_combinedTest[:, k] = X_xTest.iloc[:, k]
+    X_combinedTest[:, k + featureNumber] = X_yTest.iloc[:, k]
+    X_combinedTest[:, k + (2 * featureNumber)] = X_zTest.iloc[:, k]
+    X_combinedTest[:, k + (3 * featureNumber)] = X_allTest.iloc[:, k]
+
+# Defining classifier amd the pipeline with normalized inputs
+l_reg = LogisticRegression(max_iter=10000)
+clfCombined = make_pipeline(StandardScaler(), l_reg)
+
+# Training the model
+clfCombined.fit(X_combinedTrain, Y_combinedTrain)
+
+# Calculating the predictions and their probabilities
+Y_predicted_combined = clfCombined.predict(X_combinedTest)
+Y_clf_prob_combined = clfCombined.predict_proba(X_combinedTest)
+
+# Outputting the classification accuracy and recall
+accuracyCombined = accuracy_score(Y_combinedTest, Y_predicted_combined)
+recallCombined = recall_score(Y_combinedTest, Y_predicted_combined)
+print('Accuracy of the model is: ', accuracyCombined)
+print('Recall of the model is: ', recallCombined)
+
+# Plotting the confusion matrix for the model
+cm = confusion_matrix(Y_combinedTest, Y_predicted_combined)
+cm_display = ConfusionMatrixDisplay(cm).plot()
+plt.show()
+
+# Calculating F1 score for the z acceleration
+TP = cm[0, 0]
+FP = cm[0, 1]
+FN = cm[1, 0]
+F1 = (2*TP)/(2*TP+FP+FN)
+print('F1 Score: ', F1)
+
+# Plotting the ROC curve
+fpr, tpr, _ = roc_curve(Y_combinedTest, Y_clf_prob_combined[:, 1], pos_label=clfCombined.classes_[1])
+roc_display = RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
+plt.show()
+
+# Outputting the AUC
+auc = roc_auc_score(Y_combinedTest, Y_clf_prob_combined[:, 1])
+print('AUC: ', auc)
