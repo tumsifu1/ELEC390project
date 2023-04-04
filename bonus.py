@@ -128,7 +128,7 @@ def processData():
         tk.messagebox.showwarning(title="Warning", message="Please enter a name for the output file before proceeding!")
         return
     
-    url = "http://your-website-url-here"
+    url = "http://website-url-here"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
