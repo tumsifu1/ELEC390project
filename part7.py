@@ -12,6 +12,7 @@ import os
 filePath =""
 fileName = ""
 output_data = None
+Y_clf_prob_combined = None
 
 #feature extraction function called in the process data function
 def data_feature_extraction(windows):
@@ -88,6 +89,50 @@ def clear_selection():
 
 #allows you to plot scatter of the outputs
 def view_plots(output_data):
+    global Y_clf_prob_combined
+    # Convert indices in 'activity' column to 'walking' or 'jumping'
+    output_data['activity'] = np.where(output_data['activity'] == 0, 'walking', 'jumping')
+
+    # Define x-axis data (window number)
+    x_data = output_data.index
+
+    #get probabilities
+    
+
+    # Define y-axis data (walking and jumping probabilities)
+    y_data = Y_clf_prob_combined.reshape((-1, 2))
+
+    # Define bar labels
+    bar_labels = ['Walking Probability', 'Jumping Probability']
+
+    # Create plot
+    fig, ax = plt.subplots(figsize=(12, 6))
+    for i in range(len(bar_labels)):
+        ax.bar(x_data + i*0.4, y_data[:, i], width=0.4, label=bar_labels[i])
+
+    # Add activity labels above bars
+    for i in range(len(x_data)):
+        if output_data.iloc[i]['activity'] == 'walking':
+            label = 'W'
+            color = 'blue'
+        else:
+            label = 'J'
+            color = 'orange'
+        ax.text(x_data[i] - 0.1, max(y_data[i])+0.05, label, color=color, fontweight='bold', fontsize=12)
+
+    # Set plot labels and legend
+    ax.set_xlabel('Window Number')
+    ax.set_ylabel('Probability')
+    ax.set_xticks(x_data)
+    ax.set_xticklabels(x_data+1)
+    ax.set_title('Walking and Jumping Probabilities by Window Number')
+    ax.legend()
+    ax.set_ylim([0, 1.2])
+
+    # Show plot
+    plt.show()
+
+
     if output_data is None:
         tk.messagebox.showwarning(title="Warning", message="Output data is empty. Please try again!")
     output_data = output_data.drop(index=0)
@@ -116,6 +161,8 @@ def getpath():
 #process input the data and classifes it 
 def processData():
     global output_data
+    global Y_clf_prob_combined
+
     if not filePath:
         tk.messagebox.showwarning(title="Warning", message="Please select a file before proceeding!")
         return
@@ -170,6 +217,7 @@ def processData():
 
     Y_predicted = clfCombined.predict(X_combined)
     Y_output = np.reshape(Y_predicted, (-1, 1))
+    Y_clf_prob_combined = clfCombined.predict_proba(X_combined)
 
     column_labels = np.array(
     ['activity', 'x_max_val', 'x_min_val', 'x_range_val', 'x_mean_val', 'x_median_val', 'x_var_val', 'x_skew_val',
