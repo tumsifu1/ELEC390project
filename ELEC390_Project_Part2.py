@@ -148,3 +148,5 @@ with h5py.File('./accelerometer_data.h5', 'w') as hdf:
     train_group.create_dataset('jumping', data=[seg[0] for seg in train_segments if 'jumping' in seg[1]])
     test_group.create_dataset('walking', data=[seg[0] for seg in test_segments if 'walking' in seg[1]])
     test_group.create_dataset('jumping', data=[seg[0] for seg in test_segments if 'jumping' in seg[1]])
+
+#

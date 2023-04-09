@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from openpyxl.workbook import Workbook
 
 def read_data(activity):
     with h5py.File('./accelerometer_data.h5', 'r') as f:
@@ -91,52 +92,115 @@ walking_data = read_data('walking')
 
 # plt.show()
 
-#plotting windows
-def plot_window(walking_data, jumping_data, window_start, window_size):
-    fig, ax = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+# #plotting windows
+# def plot_window(walking_data, jumping_data, window_start, window_size):
+#     fig, ax = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
 
-    # Plot walking data window
-    walking_window = walking_data[window_start:window_start + window_size, :]
-    plot_data(ax[0], walking_window, 'Walking: Acceleration Magnitude vs Time', 'blue', 'Walking')
+#     # Plot walking data window
+#     walking_window = walking_data[window_start:window_start + window_size, :]
+#     plot_data(ax[0], walking_window, 'Walking: Acceleration Magnitude vs Time', 'blue', 'Walking')
 
-    # Plot jumping data window
-    jumping_window = jumping_data[window_start:window_start + window_size, :]
-    plot_data(ax[1], jumping_window, 'Jumping: Acceleration Magnitude vs Time', 'red', 'Jumping')
+#     # Plot jumping data window
+#     jumping_window = jumping_data[window_start:window_start + window_size, :]
+#     plot_data(ax[1], jumping_window, 'Jumping: Acceleration Magnitude vs Time', 'red', 'Jumping')
 
-    fig.tight_layout()
-    plt.show()
+#     fig.tight_layout()
+#     plt.show()
 
-window_start = 1000
-window_size = 500
-plot_window(walking_data, jumping_data, window_start, window_size)
+# window_start = 1000
+# window_size = 500
+# plot_window(walking_data, jumping_data, window_start, window_size)
 
-def window_summary_statistics(data, window_size=500, step_size=100):
-    num_segments = (len(data) - window_size) // step_size + 1
-    segments = [data[i * step_size : i * step_size + window_size] for i in range(num_segments)]
+# def window_summary_statistics(data, window_size=500, step_size=100):
+#     num_segments = (len(data) - window_size) // step_size + 1
+#     segments = [data[i * step_size : i * step_size + window_size] for i in range(num_segments)]
     
-    means = []
-    stds = []
+#     means = []
+#     stds = []
     
-    for segment in segments:
-        accel_mag = np.linalg.norm(segment[:, 1:4], axis=1)
-        means.append(np.mean(accel_mag))
-        stds.append(np.std(accel_mag))
+#     for segment in segments:
+#         accel_mag = np.linalg.norm(segment[:, 1:4], axis=1)
+#         means.append(np.mean(accel_mag))
+#         stds.append(np.std(accel_mag))
     
-    return means, stds
+#     return means, stds
 
-# Calculate mean and standard deviation for walking and jumping data
-walking_means, walking_stds = window_summary_statistics(walking_data)
-jumping_means, jumping_stds = window_summary_statistics(jumping_data)
+# # Calculate mean and standard deviation for walking and jumping data
+# walking_means, walking_stds = window_summary_statistics(walking_data)
+# jumping_means, jumping_stds = window_summary_statistics(jumping_data)
 
-# Plot mean vs standard deviation for walking and jumping windows
-fig, ax = plt.subplots(figsize=(12, 8))
-ax.scatter(walking_means, walking_stds, color='blue', label='Walking', alpha=0.5)
-ax.scatter(jumping_means, jumping_stds, color='red', label='Jumping', alpha=0.5)
-ax.set_title('Standard Deviation vs Mean of Acceleration Magnitude (5-second windows)')
-ax.set_xlabel('Mean Acceleration Magnitude')
-ax.set_ylabel('Standard Deviation of Acceleration Magnitude')
-ax.legend()
+# # Plot mean vs standard deviation for walking and jumping windows
+# fig, ax = plt.subplots(figsize=(12, 8))
+# ax.scatter(walking_means, walking_stds, color='blue', label='Walking', alpha=0.5)
+# ax.scatter(jumping_means, jumping_stds, color='red', label='Jumping', alpha=0.5)
+# ax.set_title('Standard Deviation vs Mean of Acceleration Magnitude (5-second windows)')
+# ax.set_xlabel('Mean Acceleration Magnitude')
+# ax.set_ylabel('Standard Deviation of Acceleration Magnitude')
+# ax.legend()
 
-fig.tight_layout()
-plt.show()
+# fig.tight_layout()
+# plt.show()
 
+import openpyxl
+
+# Create a new workbook and select the active worksheet
+workbook = openpyxl.Workbook()
+worksheet = workbook.active
+
+# Data to be displayed in the table
+data = {
+    'Aaron': {
+        'version': '1.1.11',
+        'build': '10011',
+        'fileFormat': '1.15',
+        'deviceModel': 'iPhone14,3',
+        'deviceBrand': 'Apple',
+        'deviceBoard': '',
+        'deviceManufacturer': '',
+        'deviceBaseOS': '',
+        'deviceCodename': '',
+        'deviceRelease': '15.7.1',
+        'depthFrontSensor': '1',
+        'depthFrontResolution': '',
+        'depthFrontRate': '',
+        'depthBackSensor': '1',
+        'depthBackResolution': '',
+        'depthBackRate': ''
+    },
+    'Michael': {},
+    'Xuchen': {
+        'version': '1.1.11',
+        'build': '1011102',
+        'fileFormat': '1.15',
+        'deviceModel': 'SM-A7070',
+        'deviceBrand': 'samsung',
+        'deviceBoard': 'sm6150',
+        'deviceManufacturer': 'samsung',
+        'deviceBaseOS': 'samsung/a70szc/a70s:11/RP1A.200720.012/A7070ZCU3CVD1:user/release-keys',
+        'deviceCodename': 'REL',
+        'deviceRelease': '11',
+        'depthFrontSensor': '0',
+        'depthFrontResolution': 'null',
+        'depthFrontRate': 'null',
+        'depthBackSensor': '0',
+        'depthBackResolution': 'null',
+        'depthBackRate': 'null'
+    }
+}
+
+# Add the header row
+header = ['Property', 'Aaron', 'Michael', 'Xuchen']
+worksheet.append(header)
+
+# Add the data rows
+for key in data['Aaron'].keys():
+    row = [key, data['Aaron'][key], data['Michael'].get(key, ''), data['Xuchen'].get(key, '')]
+    worksheet.append(row)
+
+# Autofit columns
+for column_cells in worksheet.columns:
+    length = max(len(str(cell.value)) for cell in column_cells)
+    worksheet.column_dimensions[column_cells[0].column_letter].width = length
+
+# Save the workbook
+workbook.save('metadata.xlsx')
