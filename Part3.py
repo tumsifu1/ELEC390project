@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import openpyxl
 from openpyxl.workbook import Workbook
 
 def read_data(activity):
@@ -141,7 +142,7 @@ walking_data = read_data('walking')
 # fig.tight_layout()
 # plt.show()
 
-import openpyxl
+
 
 # Create a new workbook and select the active worksheet
 workbook = openpyxl.Workbook()
