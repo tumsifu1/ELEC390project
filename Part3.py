@@ -167,7 +167,24 @@ data = {
         'depthBackResolution': '',
         'depthBackRate': ''
     },
-    'Michael': {},
+    'Michael': {
+        'version': '1.1.11',
+        'build': '10011',
+        'fileFormat': '1.15',
+        'deviceModel': 'iPhone12,8',
+        'deviceBrand': 'Apple',
+        'deviceBoard': '',
+        'deviceManufacturer': '',
+        'deviceBaseOS': '',
+        'deviceCodename': '',
+        'deviceRelease': '16.1.1',
+        'depthFrontSensor': '1',
+        'depthFrontResolution': '',
+        'depthFrontRate': '',
+        'depthBackSensor': '0',
+        'depthBackResolution': '',
+        'depthBackRate': ''
+    },
     'Xuchen': {
         'version': '1.1.11',
         'build': '1011102',
