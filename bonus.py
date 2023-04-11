@@ -1,244 +1,185 @@
 import numpy as np
-import pandas as pd
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as ec
+from selenium.webdriver.common.by import By
+import time
 from scipy.stats import skew
 import joblib
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
-import matplotlib.pyplot as plt
-import requests
-from bs4 import BeautifulSoup
-import os
+from tkinter import messagebox
 
-#global varaibles
-filePath =""
-fileName = ""
-output_data = None
+#global var
+driver = None
+webdriver_path = None
+ip_address = None
 
-#feature extraction function called in the process data function
-def data_feature_extraction(windows):
-    w_size = 5
+predicted_activity = None
 
-    filtered_data = np.zeros((windows.shape[0], windows.shape[1] - w_size + 1, windows.shape[2]))
+clfCombined = joblib.load('classifier.joblib')
 
-    for i in range(windows.shape[0]):
-        x_df = pd.DataFrame(windows[i, :, 0])
-        y_df = pd.DataFrame(windows[i, :, 1])
-        z_df = pd.DataFrame(windows[i, :, 2])
-        total = windows[i, :, 3]
+def feature_extract(window_data):
+    # Compute the features
+    max_val = np.max(window_data)
+    min_val = np.min(window_data)
+    range_val = max_val - min_val
+    mean_val = np.mean(window_data)
+    median_val = np.median(window_data)
+    var_val = np.var(window_data)
+    skew_val = skew(window_data)
+    rms_val = np.sqrt(np.mean(window_data ** 2))
+    kurt_val = np.mean((window_data - np.mean(window_data)) ** 4) / (np.var(window_data) ** 2)
+    std_val = np.std(window_data)
 
-        x_sma = x_df.rolling(w_size).mean().values.ravel()
-        y_sma = y_df.rolling(w_size).mean().values.ravel()
-        z_sma = z_df.rolling(w_size).mean().values.ravel()
+    # Store the features in the features array
+    features = (max_val, min_val, range_val, mean_val, median_val, var_val, skew_val, rms_val, kurt_val, std_val)
 
-        x_sma = x_sma[w_size - 1:]
-        y_sma = y_sma[w_size - 1:]
-        z_sma = z_sma[w_size - 1:]
-        total_sma = total[w_size - 1:]
-
-        filtered_data[i, :, 0] = x_sma
-        filtered_data[i, :, 1] = y_sma
-        filtered_data[i, :, 2] = z_sma
-        filtered_data[i, :, 3] = total_sma
-
-    windows = filtered_data
-    features = np.zeros((windows.shape[0], 10, 4))
-
-    for i in range(windows.shape[2]):
-        for j in range(windows.shape[0]):
-            window_data = windows[j, :, i]
-
-            max_val = np.max(window_data)
-            min_val = np.min(window_data)
-            range_val = max_val - min_val
-            mean_val = np.mean(window_data)
-            median_val = np.median(window_data)
-            var_val = np.var(window_data)
-            skew_val = skew(window_data)
-            rms_val = np.sqrt(np.mean(window_data ** 2))
-            kurt_val = np.mean((window_data - np.mean(window_data)) ** 4) / (np.var(window_data) ** 2)
-            std_val = np.std(window_data)
-
-            features[j, :, i] = (max_val, min_val, range_val, mean_val, median_val, var_val, skew_val, rms_val,
-                                 kurt_val, std_val)
-
-    x_feature = features[:, :, 0]
-    y_feature = features[:, :, 1]
-    z_feature = features[:, :, 2]
-    total_feature = features[:, :, 3]
-
-    all_features = np.concatenate((x_feature, y_feature, z_feature, total_feature), axis=0)
-
-    labels = np.concatenate((np.ones((x_feature.shape[0], 1)),
-                         2 * np.ones((y_feature.shape[0], 1)),
-                         3 * np.ones((z_feature.shape[0], 1)),
-                         4 * np.ones((total_feature.shape[0], 1))), axis=0)
-
-    all_features = np.hstack((all_features, labels))
-
-    return all_features
-
-#gets the name of the file in the input field
-def getname():
-    global fileName
-    fileName = inputtxt.get("1.0", "end-1c")
-
-#clears the input and output field
-def clear_selection():
-    inputtxt.delete("1.0", "end")
-    selected_file_label.config(text="")
-
-#allows you to plot scatter of the outputs
-def view_plots(output_data):
-    if output_data is None:
-        tk.messagebox.showwarning(title="Warning", message="Output data is empty. Please try again!")
-    output_data = output_data.drop(index=0)
-
-    print(output_data)
-
-    walking_data = output_data[output_data['activity'] == 'walking']
-    jumping_data = output_data[output_data['activity'] == 'jumping']
+    return features
 
 
-    plt.scatter(jumping_data['x_max_val'], jumping_data['x_min_val'], c = 'red' ,label='Jumping')
-    plt.scatter(walking_data['x_max_val'], walking_data['x_min_val'], c = 'blue',label='walking')
-    plt.xlabel('X MAX VAL')
-    plt.ylabel('X MIN VAL')
-    plt.legend()
-    plt.show()
 
-#gets the path for the outputs
-def getpath():
-    global filePath
-    global output_data
 
-    filePath = filedialog.askopenfilename()
-    selected_file_label.config(text=os.path.basename(filePath))
-    
- ####process input the data and classifes it 
-                               
-def processData():
-    global output_data
+def process_data_and_predict():
+    global predicted_activity
+    window_size = 50
+    iterations = 15
+    time.sleep(5)
+    for n in range(iterations):
+        # Create an empty array with shape (1, 100, 4)
+        x_data_array = np.zeros(window_size)
+        y_data_array = np.zeros(window_size)
+        z_data_array = np.zeros(window_size)
+        total_data_array = np.zeros(window_size)
 
-    #will need new error checking
-    if not filePath:
-        tk.messagebox.showwarning(title="Warning", message="Please select a file before proceeding!")
-        return
-    if not fileName:
-        tk.messagebox.showwarning(title="Warning", message="Please enter a name for the output file before proceeding!")
-        return
-    
-    url = "http://website-url-here"
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, 'html.parser')
+        # Initialize index to keep track of data points
+        index = 0
 
-    input_data = soup.find(id='accelerometer-data').get_text()
-   
-    data = input_data.drop(columns=['Time (s)'])
+        while True:
+            try:
+                element = WebDriverWait(driver, 50).until(
+                    ec.presence_of_element_located((By.ID, "element6"))
+                )
 
-    window_time = 500
-    num_rows = len(data)
-    num_windows = num_rows // window_time
-    num_rows = num_windows * window_time
-    data = data.iloc[:num_rows]
+                # Collect data from elements 6, 7, 8, 9
+                soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-    data_windows = []
-    for i in range(0, len(data), window_time):
-        if i + window_time <= len(data):
-            data_windows.append(data.iloc[i:i + window_time, :])
+                value_x = float(soup.find('div', {'id': 'element6'}).find('span', {'class': 'valueNumber'}).text.strip())
+                value_y = float(soup.find('div', {'id': 'element7'}).find('span', {'class': 'valueNumber'}).text.strip())
+                value_z = float(soup.find('div', {'id': 'element8'}).find('span', {'class': 'valueNumber'}).text.strip())
+                value_total = np.sqrt(value_x ** 2 + value_y ** 2 + value_z ** 2)
 
-    data_array = np.stack(data_windows)
+                # Convert values to floats and store in data_array
+                x_data_array[index] = value_x
+                y_data_array[index] = value_y
+                z_data_array[index] = value_z
+                total_data_array[index] = value_total
 
-    data_features = data_feature_extraction(data_array)
+                index += 1
 
-    column_labels = np.array(
-    ['max_val', 'min_val', 'range_val', 'mean_val', 'median_val', 'var_val', 'skew_val', 'rms_val', 'kurt_val',
-    'std_val', 'measurement'])
+                # Break loop after 30 data points
+                if index == window_size:
+                    break
 
-    dataset = pd.DataFrame(data_features, columns=column_labels)
+            except KeyboardInterrupt:
+                driver.quit()
+                break
 
-    featureNumber = 10
+        x_data_features = feature_extract(x_data_array)
+        y_data_features = feature_extract(y_data_array)
+        z_data_features = feature_extract(z_data_array)
+        total_data_features = feature_extract(total_data_array)
 
-    xData = dataset[dataset.iloc[:, featureNumber] == 1]
-    yData = dataset[dataset.iloc[:, featureNumber] == 2]
-    zData = dataset[dataset.iloc[:, featureNumber] == 3]
-    allData = dataset[dataset.iloc[:, featureNumber] == 4]
+        X_combined = np.concatenate((x_data_features, y_data_features, z_data_features, total_data_features), axis=0)
+        X_combined = X_combined.reshape(1, -1)
 
-    X_xdata = xData.iloc[:, 0:-1]
-    X_ydata = yData.iloc[:, 0:-1]
-    X_zdata = zData.iloc[:, 0:-1]
-    X_alldata = allData.iloc[:, 0:-1]
+        Y_predicted = clfCombined.predict(X_combined)
 
-    X_combined = np.zeros((X_xdata.shape[0], 4 * featureNumber))
-    for k in range(featureNumber):
-        X_combined[:, k] = X_xdata.iloc[:, k]
-        X_combined[:, k + featureNumber] = X_ydata.iloc[:, k]
-        X_combined[:, k + (2 * featureNumber)] = X_zdata.iloc[:, k]
-        X_combined[:, k + (3 * featureNumber)] = X_alldata.iloc[:, k]
+        predicted_activity = Y_predicted[0]
+        print(Y_predicted)
+        window.after(0, update_activity)
+        
+        #change_window_color(Y_predicted[0])
+        
+#driver = webdriver.Chrome('C:\\Users\\mjpat\\Downloads\\chromedriver_win32\\chromedriver.exe')
+#driver.get('http://192.168.2.24/')
 
-    clfCombined = joblib.load('classifier.joblib')
+#functions for UI
+def get_webdriver_path():
+    global webdriver_path
+    webdriver_path = filedialog.askopenfilename()
+    webdriver_path_label.config(text=webdriver_path)
 
-    Y_predicted = clfCombined.predict(X_combined)
-    Y_output = np.reshape(Y_predicted, (-1, 1))
+def get_ip_address():
+    global ip_address
+    ip_address = ip_address_entry.get()
+    if not ip_address:
+        messagebox.showwarning("Warning", "Please enter a valid IP address.")
 
-    column_labels = np.array(
-    ['activity', 'x_max_val', 'x_min_val', 'x_range_val', 'x_mean_val', 'x_median_val', 'x_var_val', 'x_skew_val',
-    'x_rms_val', 'x_kurt_val', 'x_std_val', 'y_max_val', 'y_min_val', 'y_range_val', 'y_mean_val', 'y_median_val',
-    'y_var_val', 'y_skew_val', 'y_rms_val', 'y_kurt_val', 'y_std_val', 'z_max_val', 'z_min_val', 'z_range_val',
-    'z_mean_val', 'z_median_val', 'z_var_val', 'z_skew_val', 'z_rms_val', 'z_kurt_val', 'z_std_val',
-    'total_max_val', 'total_min_val', 'total_range_val', 'total_mean_val', 'total_median_val', 'total_var_val',
-    'total_skew_val', 'total_rms_val', 'x_kurt_val', 'x_std_val'])
+def submit():
+    global driver, webdriver_path, ip_address
+    if webdriver_path and ip_address:
+        driver = webdriver.Chrome(webdriver_path)
+        driver.get(f'http://{ip_address}/')
+        process_data_and_predict()
+    else:
+        messagebox.showwarning("Warning", "Please select a web driver and enter a valid IP address before submitting.")
 
-    output_data = pd.DataFrame(np.hstack((Y_output, X_combined)), columns=column_labels)
+def show_instructions():
+    instructions = """1. Open the Phyphox app
+2. Click on "Acceleration without G"
+3. Activate the "Access with distance" option by clicking the three buttons in the top right corner of the Phyphox interface
+4. Input the URL provided by Phyphox into the UI text box and go to it on Chrome
+5. Input the location of the web driver into the UI text box"""
 
-    output_data['activity'] = np.where(output_data['activity'] == 0, 'walking', 'jumping')
+    messagebox.showinfo("Instructions", instructions)
 
-    output_data.to_csv(fileName)
-    tk.messagebox.showinfo(title="Done", message="Output file has been saved!")
-    view_plots_btn.config(state=tk.NORMAL)  # Enable the view_plots_btn button
-    return output_data
 
-# UI 
+def update_activity(activity):
+    global predicted_activity
+    if activity == 1:
+        activity_icon_label.config(image=activity_icon_walking)
+    else:
+        activity_icon_label.config(image=activity_icon_jumping)
 
+#UI
 window = tk.Tk()
-
-# Set window background color to black
+activity_icon_walking = tk.PhotoImage(file='walking.png')
+activity_icon_jumping = tk.PhotoImage(file='jumping.png')
 window.configure(bg='black')
-
 window.title('Acceleration Classifier')
 
-greeting = tk.Label(text="Welcome to the acceleration classifier!", fg='#7FDBFF', bg='black', font=('Arial', 14, 'bold'), width=300, height=10)
-greeting.pack()
+webdriver_path_label = tk.Label(window, width=40, text="", anchor='w', bg='white', relief='sunken')
+webdriver_path_label.pack()
+webdriver_path_label.place(x=100, y=30)
 
-btn = tk.Button(window, text="Select File", command=getpath, bg='white', fg='black', font=('Arial', 10, 'bold'), width=20)
-btn.place(x=430, y=150)
+webdriver_path_button = tk.Button(window, text="Select Webdriver", command=get_webdriver_path, bg='white', fg='black', font=('Arial', 10, 'bold'), width=20)
+webdriver_path_button.pack()
+webdriver_path_button.place(x=430, y=30)
 
-inputGreeting = tk.Label(text="Name your output file!", fg='#7FDBFF', bg='black', font=('Arial', 12))
-inputGreeting.pack()
-inputGreeting.place(x=425, y=200)
+ip_address_entry = tk.Entry(window, width=50)
+ip_address_entry.pack()
+ip_address_entry.place(x=100, y=70)
 
-inputtxt = tk.Text(window, height=1, width=21, bg='white', fg='black')
-inputtxt.pack()
-inputtxt.place(x=430, y=240)
-submit = tk.Button(window, text="Submit", command=lambda: [getname(), processData()], bg='white', fg='black', font=('Arial', 10, 'bold'), width=20)
+ip_address_button = tk.Button(window, text="Enter IP Address", command=lambda: [get_ip_address()], bg='white', fg='black', font=('Arial', 10, 'bold'), width=20)
+ip_address_button.pack()
+ip_address_button.place(x=430, y=70)
 
-clear_selection_btn = tk.Button(window, text="Clear Selection", command=clear_selection, bg='white', fg='black', font=('Arial', 10, 'bold'), width=20)
-clear_selection_btn.place(x=430, y=350)
+submit_button = tk.Button(window, text="Submit", command=submit, bg='white', fg='black', font=('Arial', 10, 'bold'), width=20)
+submit_button.pack()
+submit_button.place(x=100, y=110)
 
-progress_bar = ttk.Progressbar(window, orient="horizontal", length=300, mode="determinate")
-progress_bar.place(x=350, y=450)
+instructions_button = tk.Button(window, text="Instructions", command=show_instructions, bg='white', fg='black', font=('Arial', 10, 'bold'), width=20)
+instructions_button.pack()
+instructions_button.place(x=430, y=110)
 
-view_plots_btn = tk.Button(window, text="View Plots", command=lambda: view_plots(output_data), bg='white', fg='black', font=('Arial', 10, 'bold'), width=20, state=tk.DISABLED)
-view_plots_btn.place(x=430, y=400)
+activity_icon_label = tk.Label(window, bg='white', image='', width=100, height=50)
+activity_icon_label.pack()
+activity_icon_label.place(x=100, y=150)
 
-submit.place(x=430, y=300)
+
+
 window.geometry("1000x600")
-
-selected_file_label = tk.Label(window, text="", fg='#7FDBFF', bg='black')
-selected_file_label.place(x=430, y=180)
-
 window.mainloop()
-
-
-
-
