@@ -1,3 +1,5 @@
+# ELEC 390 Project Bonus
+
 import numpy as np
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -59,11 +61,10 @@ def process_data_and_predict():
     # Update the main window
     new_root.update()
 
-    window_size = 50
-    iterations = 15
-    time.sleep(10)
+    window_size = 50  # Number of datapoints for each classification
+    iterations = 15  # Number of times data gets classified
+    time.sleep(10)  # Allows time for set up
     for n in range(iterations):
-        # Create an empty array with shape (1, 100, 4)
         x_data_array = np.zeros(window_size)
         y_data_array = np.zeros(window_size)
         z_data_array = np.zeros(window_size)
@@ -97,7 +98,7 @@ def process_data_and_predict():
 
                 index += 1
 
-                # Break loop after 30 data points
+                # Break loop
                 if index == window_size:
                     break
 
@@ -116,13 +117,14 @@ def process_data_and_predict():
         Y_predicted = clfCombined.predict(X_combined)
 
         predicted_activity = Y_predicted[0]
-        print(Y_predicted)
 
         # update the UI window with the predicted activity
         if predicted_activity == 0:
             prediction_label.config(text="Walking")
+            print('Walking')
         elif predicted_activity == 1:
             prediction_label.config(text="Jumping")
+            print('Jumping')
 
         # update the UI window
         new_root.update()
@@ -148,9 +150,6 @@ def submit():
         driver.get(f'http://{ip_address}/')
         process_data_and_predict()
 
-        # Close the UI after the function is called
-        window.destroy()
-
     else:
         messagebox.showwarning("Warning", "Please select a web driver and enter a valid IP address before submitting.")
 
@@ -158,12 +157,12 @@ def submit():
 def show_instructions():
     instructions = """1. Open the Phyphox app
 2. Click on "Acceleration without G"
-3. Clicking the button with threes in the top right corner of the Phyphox interface and select 'Enable Remote access'
-4. Input the location of your Chrome web driver into the UI text box
-4. Input the numbers from the URL provided by Phyphox into the UI text box and click the 'Enter' button
-5. Click submit
-6. Navigate to the 'Mutli' window
-7. Look on your screen to view the activity classification (there may be an initial delay)"""
+3. Click the button with three dots in the top right corner of the Phyphox interface and select 'Enable Remote access'
+4. Select the location of your Chrome Web Driver into the UI text box 
+5. Input the numbers from the URL provided by Phyphox into the UI text box and click the 'Enter' button
+6. Click 'Submit'
+7. Navigate to the 'Mutli' window
+8. Wait a few seconds and then look on your screen to view the activity classification"""
     messagebox.showinfo("Instructions", instructions)
 
 # UI
