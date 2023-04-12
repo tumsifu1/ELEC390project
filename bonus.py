@@ -47,7 +47,6 @@ def process_data_and_predict():
     window.destroy()
 
     # create new UI with predicted activity
-    # Set up the main window
     new_root = tk.Tk()
     new_root.title("Prediction")
     new_root.geometry("400x400")
