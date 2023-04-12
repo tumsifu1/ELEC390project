@@ -47,10 +47,17 @@ def process_data_and_predict():
     window.destroy()
 
     # create new UI with predicted activity
+    # Set up the main window
     new_root = tk.Tk()
-    prediction_label = tk.Label(new_root, text="")
-    prediction_label.pack()
-    prediction_label.config(text="Waiting ...")
+    new_root.title("Prediction")
+    new_root.geometry("400x400")
+    new_root.configure(bg="black")
+
+    # Create the prediction label
+    prediction_label = tk.Label(new_root, text="Waiting ...", bg="black", fg="white", font=("Helvetica", 35), wraplength=180, justify="center")
+    prediction_label.pack(expand=True)
+
+    # Update the main window
     new_root.update()
 
     window_size = 50
@@ -178,7 +185,7 @@ ip_address_entry = tk.Entry(window, width=50)
 ip_address_entry.pack()
 ip_address_entry.place(x=100, y=70)
 
-ip_address_button = tk.Button(window, text="Enter", command=lambda: [get_ip_address()], bg='white',
+ip_address_button = tk.Button(window, text="Enter IP address", command=lambda: [get_ip_address()], bg='white',
                               fg='black', font=('Arial', 10, 'bold'), width=20)
 ip_address_button.pack()
 ip_address_button.place(x=430, y=70)
